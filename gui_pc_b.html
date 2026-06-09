@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PC-B · Panel Odbiornika</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #080b0f;
+    --surface: #0e1117;
+    --surface2: #131820;
+    --border: #1a2235;
+    --accent: #a78bfa;
+    --success: #34d399;
+    --warning: #fbbf24;
+    --error: #f87171;
+    --text: #e2e8f0;
+    --muted: #475569;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh;
+    background-image: radial-gradient(ellipse 70% 50% at 100% 0%, rgba(167,139,250,.07) 0%, transparent 60%),
+                      radial-gradient(ellipse 50% 40% at 0% 100%, rgba(52,211,153,.05) 0%, transparent 60%);
+  }
+  header {
+    padding: 20px 32px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 16px;
+    background: rgba(14,17,23,.92); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 100;
+  }
+  .badge { background: var(--accent); color: #000; font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 4px; letter-spacing: .08em; }
+  header .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-left: auto; transition: all .3s; }
+  header .dot.online { background: var(--success); box-shadow: 0 0 8px var(--success); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; display: grid; grid-template-columns: 320px 1fr; gap: 24px; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .panel-head { padding: 14px 20px; border-bottom: 1px solid var(--border); font-size: 11px; font-family: var(--mono); font-weight: 600; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+  .panel-body { padding: 20px; }
+  .status-bar { grid-column: 1/-1; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 24px; display: flex; align-items: center; gap: 20px; font-family: var(--mono); font-size: 12px; }
+  .stat .label { color: var(--muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+  .stat .value { font-weight: 700; font-size: 15px; margin-top: 2px; }
+  .divider { width: 1px; height: 30px; background: var(--border); }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; }
+  .toggle-label { font-size: 13px; font-weight: 600; }
+  .toggle-sub { font-size: 11px; font-family: var(--mono); color: var(--muted); margin-top: 2px; }
+  .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; inset: 0; background: var(--surface2); border: 1px solid var(--border); border-radius: 24px; transition: all .3s; }
+  .slider:before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: var(--muted); border-radius: 50%; transition: all .3s; }
+  input:checked + .slider { background: rgba(248,113,113,.2); border-color: var(--error); }
+  input:checked + .slider:before { transform: translateX(20px); background: var(--error); }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 11px; font-family: var(--mono); color: var(--muted); margin-bottom: 6px; letter-spacing: .06em; }
+  .field input, .field select { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; color: var(--text); font-family: var(--mono); font-size: 13px; outline: none; transition: border-color .2s; }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .save-btn { background: linear-gradient(135deg, var(--accent), #7c3aed); border: none; border-radius: 6px; color: #fff; font-family: var(--sans); font-size: 13px; font-weight: 700; padding: 9px 18px; cursor: pointer; transition: opacity .2s; width: 100%; margin-top: 4px; }
+  .save-btn:hover { opacity: .85; }
+  .feed { display: flex; flex-direction: column; gap: 12px; max-height: 520px; overflow-y: auto; }
+  .feed::-webkit-scrollbar { width: 4px; }
+  .feed::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .feed-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; animation: fadeIn .3s ease; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:none; } }
+  .feed-item-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .feed-item-badge { font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 3px; letter-spacing: .08em; text-transform: uppercase; }
+  .badge-hello { background: rgba(167,139,250,.2); color: var(--accent); border: 1px solid rgba(167,139,250,.3); }
+  .badge-data  { background: rgba(52,211,153,.15); color: var(--success); border: 1px solid rgba(52,211,153,.25); }
+  .badge-slow  { background: rgba(251,191,36,.15); color: var(--warning); border: 1px solid rgba(251,191,36,.25); }
+  .badge-other { background: rgba(100,116,139,.15); color: var(--muted); border: 1px solid rgba(100,116,139,.2); }
+  .feed-meta { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: auto; }
+  .feed-endpoint { font-family: var(--mono); font-size: 11px; color: var(--text); }
+  .feed-sender { font-size: 12px; font-family: var(--mono); color: var(--muted); margin-top: 4px; }
+  .empty-state { color: var(--muted); font-family: var(--mono); font-size: 12px; padding: 40px 0; text-align: center; }
+  .live-indicator { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; color: var(--success); }
+  .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); animation: pulse 1s infinite; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge">PC-B</div>
+  <div>
+    <div style="font-size:16px;font-weight:700;letter-spacing:-.02em">Panel Odbiornika · Serwis B</div>
+    <div style="color:var(--muted);font-size:12px;font-family:var(--mono);margin-top:2px" id="selfAddr">…:5002 · nasłuchuje na żądania od PC-A</div>
+  </div>
+  <div class="dot" id="selfDot"></div>
+</header>
+
+<main>
+  <div class="status-bar">
+    <div class="stat">
+      <div class="label">PC-B Status</div>
+      <div class="value" id="selfStatus">—</div>
+    </div>
+    <div class="divider"></div>
+    <div class="stat">
+      <div class="label">Odebrano</div>
+      <div class="value" id="totalReceived" style="color:var(--accent)">—</div>
+    </div>
+    <div class="divider"></div>
+    <div class="stat">
+      <div class="label">Tryb błędów</div>
+      <div class="value" id="errorModeLabel" style="color:var(--success)">Wyłączony</div>
+    </div>
+    <div class="divider"></div>
+    <div class="stat">
+      <div class="label">Aktywne Opóźnienie</div>
+      <div class="value" id="slowDelayLabel">—</div>
+    </div>
+    <div style="margin-left:auto" class="live-indicator">
+      <div class="live-dot"></div> LIVE MONITORING
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:20px;">
+
+    <div class="panel">
+      <div class="panel-head">⚡ Symulacje i Usterki</div>
+      <div class="panel-body">
+        
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Wymuszaj błędy</div>
+            <div class="toggle-sub">PC-B zablokuje ruch błędem HTTP</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="errorToggle" onchange="saveConfig()"/>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="field" style="margin-top:6px">
+          <label>Zwracany kod (gdy aktywne)</label>
+          <select id="errorCode" onchange="saveConfig()">
+            <option value="400">400 - Bad Request</option>
+            <option value="401">401 - Unauthorized</option>
+            <option value="403">403 - Forbidden</option>
+            <option value="404">404 - Not Found</option>
+            <option value="429">429 - Too Many Requests</option>
+            <option value="500" selected>500 - Internal Server Error</option>
+            <option value="502">502 - Bad Gateway</option>
+            <option value="503">503 - Service Unavailable</option>
+            <option value="504">504 - Gateway Timeout</option>
+          </select>
+        </div>
+
+        <hr style="border:0; border-top:1px solid var(--border); margin:16px 0;" />
+
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Opóźnienie globalne</div>
+            <div class="toggle-sub">Zastosuj do wszystkich endpointów</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="globalDelayToggle" onchange="saveConfig()"/>
+            <span class="slider" style="background:var(--surface2);border-color:var(--border);"></span>
+          </label>
+        </div>
+        <div class="field" style="margin-top:6px">
+          <label>Wartość opóźnienia (sekundy)</label>
+          <div style="display:flex; gap:10px;">
+            <input type="number" id="slowDelay" min="0" max="60" value="8" style="flex:1"/>
+            <button class="save-btn" style="width:auto; margin-top:0;" onclick="saveConfig()">Zapisz</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <button onclick="clearHistory()" style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px; color:var(--muted); font-family:var(--sans); font-size:13px; cursor:pointer; transition:all .2s; width:100%;" onmouseover="this.style.borderColor='var(--error)';this.style.color='var(--error)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+      🗑 Wyczyść historię logów
+    </button>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">📥 Odebrane żądania <span style="margin-left:auto;font-weight:400" id="feedCount">0 zdarzeń</span></div>
+    <div class="panel-body">
+      <div class="feed" id="feed">
+        <div class="empty-state">⟳ Oczekiwanie na żądania od PC-A...</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const API = `${location.protocol}//${location.hostname}:5002`;
+document.getElementById('selfAddr').textContent = `${location.hostname}:5002 · nasłuchuje na żądania od PC-A`;
+
+let isFirstLoad = true;
+
+function getBadgeClass(endpoint) {
+  if (endpoint.includes('hello')) return 'badge-hello';
+  if (endpoint.includes('data'))  return 'badge-data';
+  if (endpoint.includes('slow'))  return 'badge-slow';
+  return 'badge-other';
+}
+function getLabel(endpoint) {
+  if (endpoint.includes('hello')) return 'HELLO';
+  if (endpoint.includes('data'))  return 'DATA';
+  if (endpoint.includes('slow'))  return 'SLOW';
+  if (endpoint.includes('ping') || endpoint.includes('status')) return 'PING';
+  return endpoint.split('/').pop().toUpperCase();
+}
+
+async function saveConfig() {
+  const delay = parseInt(document.getElementById('slowDelay').value) || 0;
+  const errMode = document.getElementById('errorToggle').checked;
+  const errCode = parseInt(document.getElementById('errorCode').value) || 500;
+  const globalDelay = document.getElementById('globalDelayToggle').checked;
+  
+  try {
+    await fetch(`${API}/config`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ 
+        slow_delay: delay, 
+        simulate_error: errMode,
+        error_code: errCode,
+        global_delay: globalDelay
+      })
+    });
+    loadStatus(); // Wymuś natychmiastowe odświeżenie UI
+  } catch(e) {}
+}
+
+async function loadStatus() {
+  try {
+    const r = await fetch(`${API}/status`);
+    const d = await r.json();
+    
+    // Status online
+    document.getElementById('selfStatus').textContent = d.status === 'online' ? '● Online' : '○ Offline';
+    document.getElementById('selfStatus').style.color = d.status === 'online' ? 'var(--success)' : 'var(--error)';
+    document.getElementById('selfDot').className = 'dot ' + (d.status === 'online' ? 'online' : '');
+    document.getElementById('totalReceived').textContent = d.received_count || 0;
+    
+    // Aktualizacja górnego paska
+    const errMode = d.simulate_error;
+    document.getElementById('errorModeLabel').textContent = errMode ? `🔴 HTTP ${d.error_code}` : 'Wyłączony';
+    document.getElementById('errorModeLabel').style.color = errMode ? 'var(--error)' : 'var(--success)';
+    
+    document.getElementById('slowDelayLabel').textContent = `${d.slow_delay_seconds}s ${d.global_delay ? '(Globalne)' : '(/slow)'}`;
+    document.getElementById('slowDelayLabel').style.color = d.global_delay ? 'var(--warning)' : 'var(--text)';
+
+    // Inicjalizacja pól formularza tylko przy pierwszym załadowaniu, żeby nie przeszkadzać w pisaniu
+    if(isFirstLoad) {
+      document.getElementById('errorToggle').checked = d.simulate_error;
+      document.getElementById('errorCode').value = d.error_code || 500;
+      document.getElementById('globalDelayToggle').checked = d.global_delay;
+      document.getElementById('slowDelay').value = d.slow_delay_seconds;
+      isFirstLoad = false;
+    }
+  } catch(e) {
+    document.getElementById('selfStatus').textContent = '○ Offline';
+    document.getElementById('selfDot').className = 'dot';
+  }
+}
+
+async function loadHistory() {
+  try {
+    const r = await fetch(`${API}/history`);
+    const items = await r.json();
+    const feed = document.getElementById('feed');
+    document.getElementById('feedCount').textContent = items.length + ' zdarzeń';
+
+    if (!items.length) {
+      feed.innerHTML = '<div class="empty-state">⟳ Oczekiwanie na żądania od PC-A...</div>';
+      return;
+    }
+
+    feed.innerHTML = items.map(i => `
+      <div class="feed-item">
+        <div class="feed-item-header">
+          <span class="feed-item-badge ${getBadgeClass(i.endpoint)}">${getLabel(i.endpoint)}</span>
+          <span class="feed-endpoint">${i.endpoint}</span>
+          <span class="feed-meta">${i.timestamp}</span>
+        </div>
+        <div class="feed-sender">od: ${i.sender || '—'} · rozmiar: ${i.payload_size}B · status: ${i.status}</div>
+      </div>
+    `).join('');
+  } catch(e) {}
+}
+
+async function clearHistory() {
+  await fetch(`${API}/history/clear`, { method: 'POST' });
+  loadHistory();
+}
+
+// Init
+loadStatus();
+loadHistory();
+setInterval(loadStatus, 3000);
+setInterval(loadHistory, 2000);
+</script>
+</body>
+</html>

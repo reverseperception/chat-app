@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PC-A · Panel Sterowania</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Space+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0d13;
+    --surface: #111520;
+    --surface2: #161c2c;
+    --border: #1e2a42;
+    --accent: #00d4ff;
+    --accent2: #7b5ea7;
+    --success: #00e676;
+    --warning: #ffab40;
+    --error: #ff5252;
+    --text: #e8edf5;
+    --muted: #4a5568;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Space Grotesk', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 0% 0%, rgba(0,212,255,.06) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 100% 100%, rgba(123,94,167,.07) 0%, transparent 60%);
+  }
+  header {
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: rgba(17,21,32,.9);
+    backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .badge {
+    background: var(--accent);
+    color: #000;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 4px;
+    letter-spacing: .08em;
+  }
+  header h1 { font-size: 18px; font-weight: 600; letter-spacing: -.02em; }
+  header .subtitle { color: var(--muted); font-size: 12px; font-family: var(--mono); margin-top: 2px; }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted);
+    margin-left: auto;
+    transition: all .3s;
+    box-shadow: none;
+  }
+  .dot.online { background: var(--success); box-shadow: 0 0 8px var(--success); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; display: grid; grid-template-columns: 340px 1fr; gap: 24px; }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .panel-head {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    font-family: var(--mono);
+    font-weight: 600;
+    letter-spacing: .1em;
+    color: var(--muted);
+    text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel-head .icon { font-size: 14px; }
+  .panel-body { padding: 20px; }
+
+  /* Config */
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 11px; font-family: var(--mono); color: var(--muted); margin-bottom: 6px; letter-spacing: .06em; }
+  .field input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px 12px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .field input:focus { border-color: var(--accent); }
+
+  /* Buttons */
+  .btn-grid { display: grid; gap: 10px; }
+  .btn {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 13px 16px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    text-align: left;
+    width: 100%;
+  }
+  .btn:hover { border-color: var(--accent); background: rgba(0,212,255,.06); transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn.loading { opacity: .6; pointer-events: none; }
+  .btn .icon { font-size: 18px; }
+  .btn .meta { font-size: 11px; font-family: var(--mono); color: var(--muted); font-weight: 400; }
+  .btn.danger:hover { border-color: var(--error); background: rgba(255,82,82,.06); }
+  .btn.warning:hover { border-color: var(--warning); background: rgba(255,171,64,.06); }
+
+  /* Response area */
+  .response-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+    min-height: 120px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--muted);
+    transition: all .3s;
+  }
+  .response-box.success { border-color: var(--success); color: var(--success); }
+  .response-box.error   { border-color: var(--error);   color: var(--error); }
+  .response-box.timeout { border-color: var(--warning);  color: var(--warning); }
+  .response-box.loading { color: var(--accent); animation: blink .8s steps(1) infinite; }
+  @keyframes blink { 50%{opacity:.3} }
+
+  /* History */
+  .history-list { display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto; }
+  .history-list::-webkit-scrollbar { width: 4px; }
+  .history-list::-webkit-scrollbar-track { background: transparent; }
+  .history-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .hist-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    display: grid;
+    grid-template-columns: 60px 1fr auto;
+    gap: 8px;
+    align-items: center;
+    font-size: 12px;
+    font-family: var(--mono);
+  }
+  .hist-item .time { color: var(--muted); font-size: 11px; }
+  .hist-item .msg { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hist-item .ms { font-size: 11px; color: var(--muted); }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .s-success { background: var(--success); }
+  .s-error   { background: var(--error); }
+  .s-timeout { background: var(--warning); }
+  .empty-state { color: var(--muted); font-family: var(--mono); font-size: 12px; padding: 20px 0; text-align: center; }
+
+  /* Status bar */
+  .status-bar {
+    grid-column: 1/-1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 20px;
+    display: flex; align-items: center; gap: 20px;
+    font-family: var(--mono); font-size: 12px;
+  }
+  .stat { display: flex; flex-direction: column; gap: 2px; }
+  .stat .label { color: var(--muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+  .stat .value { color: var(--text); font-weight: 600; font-size: 14px; }
+  .divider { width: 1px; height: 30px; background: var(--border); }
+  .counter { margin-left: auto; display: flex; gap: 16px; }
+  .count-item { text-align: right; }
+  .count-item .n { font-size: 20px; font-weight: 700; }
+  .n.ok   { color: var(--success); }
+  .n.fail { color: var(--error); }
+  .n.to   { color: var(--warning); }
+
+  /* Textarea */
+  .field textarea {
+    width: 100%; min-height: 60px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px 12px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    outline: none;
+    resize: vertical;
+    transition: border-color .2s;
+  }
+  .field textarea:focus { border-color: var(--accent); }
+
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid transparent; border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .save-btn {
+    background: linear-gradient(135deg, var(--accent), #0090b8);
+    border: none; border-radius: 6px;
+    color: #000; font-family: var(--sans); font-size: 13px; font-weight: 700;
+    padding: 9px 18px; cursor: pointer;
+    transition: opacity .2s;
+    width: 100%; margin-top: 4px;
+  }
+  .save-btn:hover { opacity: .85; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge">PC-A</div>
+  <div>
+    <div style="font-size:16px;font-weight:700;letter-spacing:-.02em">Panel Sterowania · Serwis A</div>
+    <div class="subtitle" id="selfAddr">…:5001 · inicjator połączeń</div>
+  </div>
+  <div class="dot" id="selfDot" title="Status PC-A"></div>
+</header>
+
+<main>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <div class="stat">
+      <div class="label">PC-A</div>
+      <div class="value" id="selfStatus">—</div>
+    </div>
+    <div class="divider"></div>
+    <div class="stat">
+      <div class="label">PC-B URL</div>
+      <div class="value" id="targetUrl">—</div>
+    </div>
+    <div class="divider"></div>
+    <div class="stat">
+      <div class="label">Timeout</div>
+      <div class="value" id="timeoutVal">—</div>
+    </div>
+    <div class="counter">
+      <div class="count-item">
+        <div class="n ok" id="cntOk">0</div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">OK</div>
+      </div>
+      <div class="count-item">
+        <div class="n to" id="cntTo">0</div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Timeout</div>
+      </div>
+      <div class="count-item">
+        <div class="n fail" id="cntFail">0</div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Błąd</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Left column -->
+  <div style="display:flex;flex-direction:column;gap:20px;">
+
+    <!-- Config -->
+    <div class="panel">
+      <div class="panel-head"><span class="icon">⚙</span> Konfiguracja</div>
+      <div class="panel-body">
+        <div class="field">
+          <label>Adres PC-B (URL)</label>
+          <input type="text" id="cfgUrl" placeholder="http://192.168.1.x:5002"/>
+        </div>
+        <div class="field">
+          <label>Timeout (sekundy)</label>
+          <input type="number" id="cfgTimeout" min="1" max="30" placeholder="5"/>
+        </div>
+        <button class="save-btn" onclick="saveConfig()">Zapisz konfigurację</button>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="panel">
+      <div class="panel-head"><span class="icon">▶</span> Wywołania do PC-B</div>
+      <div class="panel-body">
+        <div class="field">
+          <label>Dane do wysłania (opcjonalnie)</label>
+          <textarea id="customData" placeholder="Wpisz dowolny tekst...">Testowe dane z PC-A</textarea>
+        </div>
+        <div class="btn-grid">
+          <button class="btn" id="btnPing" onclick="callEndpoint('ping')">
+            <span class="icon">📡</span>
+            <div>
+              <div>Ping PC-B</div>
+              <div class="meta">GET /status — sprawdź dostępność</div>
+            </div>
+          </button>
+          <button class="btn" id="btnHello" onclick="callEndpoint('hello')">
+            <span class="icon">👋</span>
+            <div>
+              <div>Wyślij powitanie</div>
+              <div class="meta">POST /receive/hello</div>
+            </div>
+          </button>
+          <button class="btn" id="btnData" onclick="callEndpoint('data')">
+            <span class="icon">📦</span>
+            <div>
+              <div>Wyślij dane</div>
+              <div class="meta">POST /receive/data — przetworzenie</div>
+            </div>
+          </button>
+          <button class="btn warning" id="btnTimeout" onclick="callEndpoint('simulate-timeout')">
+            <span class="icon">⏱</span>
+            <div>
+              <div>Symuluj Timeout</div>
+              <div class="meta">PC-B celowo opóźni odpowiedź</div>
+            </div>
+          </button>
+          <button class="btn danger" onclick="clearHistory()">
+            <span class="icon">🗑</span>
+            <div>
+              <div>Wyczyść historię</div>
+              <div class="meta">Usuń logi z PC-A</div>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right column -->
+  <div style="display:flex;flex-direction:column;gap:20px;">
+
+    <!-- Response -->
+    <div class="panel">
+      <div class="panel-head"><span class="icon">↩</span> Ostatnia odpowiedź</div>
+      <div class="panel-body">
+        <div class="response-box" id="responseBox">Oczekiwanie na wywołanie...</div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="panel" style="flex:1">
+      <div class="panel-head"><span class="icon">📋</span> Historia wywołań <span style="margin-left:auto;font-weight:400" id="histCount">0 wpisów</span></div>
+      <div class="panel-body">
+        <div class="history-list" id="histList">
+          <div class="empty-state">Brak wywołań</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+const API = `${location.protocol}//${location.hostname}:5001`;
+document.getElementById('selfAddr').textContent = `${location.hostname}:5001 · inicjator połączeń`;
+let counters = { ok: 0, timeout: 0, error: 0 };
+
+// ─── Config ─────────────────────────────────────────────────────────────────
+async function loadConfig() {
+  try {
+    const r = await fetch(`${API}/config`);
+    const d = await r.json();
+    document.getElementById('cfgUrl').value = d.pc_b_url || '';
+    document.getElementById('cfgTimeout').value = d.timeout || 5;
+    document.getElementById('targetUrl').textContent = d.pc_b_url || '—';
+    document.getElementById('timeoutVal').textContent = (d.timeout || 5) + 's';
+  } catch(e) {}
+}
+
+async function saveConfig() {
+  const url = document.getElementById('cfgUrl').value.trim();
+  const timeout = parseInt(document.getElementById('cfgTimeout').value) || 5;
+  try {
+    await fetch(`${API}/config`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ pc_b_url: url, timeout })
+    });
+    document.getElementById('targetUrl').textContent = url;
+    document.getElementById('timeoutVal').textContent = timeout + 's';
+    showResponse({ message: 'Konfiguracja zapisana', pc_b_url: url, timeout }, 'success');
+  } catch(e) {
+    showResponse({ error: e.message }, 'error');
+  }
+}
+
+// ─── Calls ──────────────────────────────────────────────────────────────────
+async function callEndpoint(type) {
+  const btn = document.getElementById('btn' + type.charAt(0).toUpperCase() + type.slice(1).replace('-', ''));
+  setLoading(true, btn);
+  showResponse('⟳ Wysyłanie żądania...', 'loading');
+
+  const customData = document.getElementById('customData').value.trim();
+  let url, opts;
+
+  if (type === 'ping') {
+    url = `${API}/call/ping`;
+    opts = { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({}) };
+  } else if (type === 'hello') {
+    url = `${API}/call/hello`;
+    opts = { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({}) };
+  } else if (type === 'data') {
+    url = `${API}/call/data`;
+    opts = { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ data: customData }) };
+  } else if (type === 'simulate-timeout') {
+    url = `${API}/call/simulate-timeout`;
+    opts = { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({}) };
+    showResponse('⏱ Czekanie na PC-B... (oczekiwany timeout)', 'loading');
+  }
+
+  try {
+    const r = await fetch(url, opts);
+    const d = await r.json();
+    const resultType = d.result || (r.ok ? 'success' : 'error');
+
+    if (resultType === 'timeout') {
+      counters.timeout++;
+      showResponse(d, 'timeout');
+    } else if (resultType === 'error' || !r.ok) {
+      counters.error++;
+      showResponse(d, 'error');
+    } else {
+      counters.ok++;
+      showResponse(d, 'success');
+    }
+    updateCounters();
+    loadHistory();
+  } catch(e) {
+    counters.error++;
+    showResponse({ error: e.message, hint: `Sprawdź czy PC-A (${location.hostname}:5001) jest uruchomiony` }, 'error');
+    updateCounters();
+  } finally {
+    setLoading(false, btn);
+  }
+}
+
+function setLoading(state, btn) {
+  if (!btn) return;
+  btn.classList.toggle('loading', state);
+}
+
+function showResponse(data, type) {
+  const box = document.getElementById('responseBox');
+  box.className = 'response-box ' + type;
+  box.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+}
+
+function updateCounters() {
+  document.getElementById('cntOk').textContent = counters.ok;
+  document.getElementById('cntTo').textContent = counters.timeout;
+  document.getElementById('cntFail').textContent = counters.error;
+}
+
+// ─── History ────────────────────────────────────────────────────────────────
+async function loadHistory() {
+  try {
+    const r = await fetch(`${API}/history`);
+    const items = await r.json();
+    const list = document.getElementById('histList');
+    document.getElementById('histCount').textContent = items.length + ' wpisów';
+
+    if (!items.length) {
+      list.innerHTML = '<div class="empty-state">Brak wywołań</div>';
+      return;
+    }
+    list.innerHTML = items.map(i => `
+      <div class="hist-item">
+        <span class="time">${i.timestamp}</span>
+        <span class="msg">
+          <span class="status-dot s-${i.status}"></span>
+          ${i.endpoint} · ${i.message}
+        </span>
+        <span class="ms">${i.response_time_ms}ms</span>
+      </div>
+    `).join('');
+  } catch(e) {}
+}
+
+async function clearHistory() {
+  await fetch(`${API}/history/clear`, { method: 'POST' });
+  loadHistory();
+}
+
+// ─── Self status ─────────────────────────────────────────────────────────────
+async function checkSelf() {
+  try {
+    const r = await fetch(`${API}/status`);
+    const d = await r.json();
+    document.getElementById('selfStatus').textContent = d.status === 'online' ? '● Online' : '○ Offline';
+    document.getElementById('selfDot').className = 'dot online';
+  } catch(e) {
+    document.getElementById('selfStatus').textContent = '○ Offline';
+    document.getElementById('selfDot').className = 'dot';
+  }
+}
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+loadConfig();
+loadHistory();
+checkSelf();
+setInterval(checkSelf, 5000);
+setInterval(loadHistory, 3000);
+</script>
+</body>
+</html>
